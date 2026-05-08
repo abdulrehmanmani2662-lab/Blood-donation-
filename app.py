@@ -5,126 +5,117 @@ import pandas as pd
 # Page Config
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Shining Design & Icon Hide ---
+# --- CSS: Blood Theme & Strict Icon Hide ---
 st.markdown("""
     <style>
-    /* Sab faltu Streamlit icons aur footer hide karo */
-    header, footer, .stDeployButton, #MainMenu, [data-testid="stToolbar"], [data-testid="stDecoration"] {
+    /* Sab Streamlit icons aur extra buttons ko khatam karne ke liye */
+    header, footer, .stDeployButton, #MainMenu, [data-testid="stToolbar"], [data-testid="stDecoration"], .stStatusWidget {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* Shining Animated Header */
+    /* Shining Blood Red Header */
     .header-box {
-        background: linear-gradient(-45deg, #4a0000, #8b0000, #ff0000, #4a0000);
-        background-size: 400% 400%;
-        animation: shine_effect 4s ease infinite;
-        padding: 30px;
-        border-radius: 20px;
+        background: linear-gradient(135deg, #660000 0%, #cc0000 50%, #660000 100%);
+        background-size: 200% auto;
+        animation: shine 3s linear infinite;
+        padding: 25px;
+        border-radius: 15px;
         text-align: center;
         color: white;
         margin-bottom: 25px;
-        box-shadow: 0 10px 25px rgba(139, 0, 0, 0.5);
-        border: 2px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 20px rgba(102, 0, 0, 0.5);
     }
-    @keyframes shine_effect {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+    @keyframes shine {
+        to { background-position: 200% center; }
     }
 
-    /* Blood Red Title Font */
-    .blood-title {
-        color: #8b0000;
-        font-weight: bold;
+    /* Blood Fonts Style */
+    .blood-font {
+        color: #990000;
+        font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 3px solid #8b0000;
-        display: inline-block;
-        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        border-bottom: 3px solid #990000;
+        padding-bottom: 5px;
     }
 
-    /* Buttons Style */
+    /* Button Colors */
     .stButton>button {
-        width: 100%;
-        border-radius: 12px;
-        font-weight: bold;
-        background-color: #8b0000;
+        background-color: #990000;
         color: white;
+        border-radius: 8px;
         border: none;
-        padding: 10px;
-        transition: 0.4s;
-    }
-    .stButton>button:hover {
-        background-color: #ff0000;
-        box-shadow: 0 0 15px #ff0000;
+        height: 3.5em;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Shining Header ---
+# --- Header ---
 st.markdown("""
     <div class="header-box">
-        <h1 style='margin:0; font-size: 26px; letter-spacing: 2px;'>🩸 PUNJAB BLOOD DONATION</h1>
-        <p style='margin:5px 0; font-size: 18px; font-weight: 300;'>Welfare Committee Pindi Amolak</p>
-        <div style='font-size: 11px; opacity: 0.8; margin-top: 10px;'>Developer: <b>Mani Rajput</b></div>
+        <h1 style='margin:0; font-size: 22px; letter-spacing: 1px;'>🩸 PUNJAB BLOOD DONATION</h1>
+        <p style='margin:5px 0; font-size: 16px; opacity: 0.9;'>Welfare Committee Pindi Amolak</p>
+        <p style='margin:0; font-size: 10px; font-weight: bold;'>Developer: Mani Rajput</p>
     </div>
     """, unsafe_allow_html=True)
 
-# --- Connection ---
+# --- Database ---
 url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- Navigation ---
-col1, col2 = st.columns(2)
-with col1:
+c1, c2 = st.columns(2)
+with c1:
     if st.button("🔍 FIND DONOR"): st.session_state.p = "S"
-with col2:
+with c2:
     if st.button("📝 REGISTER ME"): st.session_state.p = "R"
 
 if 'p' not in st.session_state: st.session_state.p = "S"
 
-# --- Registration Page ---
+# --- Registration ---
 if st.session_state.p == "R":
-    st.markdown("<h3 class='blood-title'>📝 Register New Donor</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='blood-font'>📝 Register as Donor</h3>", unsafe_allow_html=True)
     with st.form("reg_form", clear_on_submit=True):
-        n = st.text_input("Full Name")
-        b = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-        c = st.text_input("City", "Pindi Amolak")
-        p = st.text_input("WhatsApp Number")
+        name = st.text_input("Aapka Naam")
+        bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+        city = st.text_input("Shehar", "Pindi Amolak")
+        phone = st.text_input("Mobile Number")
         
-        if st.form_submit_button("SAVE DATA"):
-            if n and p:
+        if st.form_submit_button("SAVE TO DIRECTORY"):
+            if name and phone:
                 try:
-                    df = conn.read(spreadsheet=url)
-                    new = pd.DataFrame([{"Name": n, "Blood Group": b, "City": c, "Contact": p}])
-                    final = pd.concat([df, new], ignore_index=True)
-                    conn.update(spreadsheet=url, data=final)
-                    st.success("Mubarak! Data sheet mein save ho gaya.")
+                    # Fresh read to avoid conflict
+                    df = conn.read(spreadsheet=url, ttl=0)
+                    new_data = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
+                    updated_df = pd.concat([df, new_data], ignore_index=True)
+                    conn.update(spreadsheet=url, data=updated_df)
+                    st.success("Data Save Ho Gaya! Shukriya.")
                     st.balloons()
-                except:
-                    st.error("Sheet permission masla! Please check Google Sheet Editor settings.")
+                except Exception as e:
+                    st.error("Sheet Error: App Reboot karein ya permission check karein.")
             else:
-                st.warning("Naam aur number lazmi likhein.")
+                st.warning("Naam aur Number likhna lazmi hai.")
 
-# --- Search Page ---
+# --- Directory ---
 else:
-    st.markdown("<h3 class='blood-title'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='blood-font'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
     try:
-        data = conn.read(spreadsheet=url)
-        if data is not None and not data.empty:
-            grp = st.selectbox("Blood Group Select Karein", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            filt = data if grp == "All" else data[data["Blood Group"] == grp]
+        data = conn.read(spreadsheet=url, ttl=0)
+        if not data.empty:
+            choice = st.selectbox("Search by Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+            filtered = data if choice == "All" else data[data["Blood Group"] == choice]
             
-            for i, row in filt.iterrows():
+            for i, row in filtered.iterrows():
                 st.markdown(f"""
-                    <div style="background:white; padding:15px; border-radius:15px; border-left:12px solid #8b0000; margin-bottom:15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                        <h4 style="margin:0; color:#8b0000;">{row['Name']}</h4>
-                        <p style="margin:5px 0; color:#333;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
-                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:10px; font-weight:bold; display:inline-block; margin-top:5px; width:100%; text-align:center;">📞 CALL DONOR</a>
+                    <div style="background:white; padding:15px; border-radius:10px; border-left:10px solid #990000; margin-bottom:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        <h4 style="margin:0; color:#990000;">{row['Name']}</h4>
+                        <p style="margin:5px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
+                        <a href="tel:{row['Contact']}" style="background:#1e7e34; color:white; padding:10px; text-decoration:none; border-radius:5px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL DONOR</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Abhi tak koi donor register nahi hua.")
+            st.info("Filhal koi donor register nahi hai.")
     except:
-        st.info("Directory khali hai. Pehla data register karein!")
+        st.info("Data load nahi ho raha. Pehla donor register karein.")
