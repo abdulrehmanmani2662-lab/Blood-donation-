@@ -2,10 +2,10 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# Page setup
+# Page configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- Header Section (Custom Logo Design) ---
+# --- Header Section ---
 st.markdown("""
     <div style="background-color: #8b0000; padding: 25px; border-radius: 15px; text-align: center; color: white; margin-bottom: 20px; border: 2px solid #ff4b4b;">
         <h1 style='margin:0; font-size: 35px;'>🩸 PUNJAB BLOOD DONATION</h1>
@@ -15,23 +15,22 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- Google Sheets Connection ---
-# APNI SHEET KA LINK NEECHE WALAY QUOTES MEIN DALEIN
-sheet_url = "APNI_GOOGLE_SHEET_KA_LINK_YAHAN_PASTE_KAREIN"
+# Aapka Diya Hua Link Yahan Set Hai
+sheet_url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
-    # Google Sheet se data read karna
     return conn.read(spreadsheet=sheet_url, usecols=[0, 1, 2, 3])
 
 # --- Sidebar Navigation ---
 st.sidebar.title("Navigation")
-menu = ["Donors Directory", "Become a Donor", "Help"]
+menu = ["Donors Directory", "Register as Donor", "Help"]
 choice = st.sidebar.radio("Select Option", menu)
 
 all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
 
-# --- 1. Registration Page ---
+# --- Registration Page ---
 if choice == "Become a Donor":
     st.subheader("📝 Naya Donor Register Karein")
     with st.form("registration_form", clear_on_submit=True):
@@ -49,15 +48,15 @@ if choice == "Become a Donor":
                     updated_df = pd.concat([existing_data, new_row], ignore_index=True)
                     conn.update(spreadsheet=sheet_url, data=updated_df)
                     st.balloons()
-                    st.success(f"Shukriya {name}! Aapka data Welfare Committee ke pas save ho gaya hai.")
-                except:
-                    st.error("Connection Error! Pehle Google Sheet ka link sahi se check karein.")
+                    st.success(f"Shukriya {name}! Aapka data save ho gaya hai.")
+                except Exception as e:
+                    st.error("Error: Meharbani karke check karein ke Google Sheet 'Editor' mode par share hai.")
             else:
-                st.error("Meharbani karke Naam aur Number lazmi likhein.")
+                st.error("Naam aur Number lazmi likhein.")
 
-# --- 2. Directory Page ---
+# --- Directory Page ---
 elif choice == "Donors Directory":
-    st.subheader("🔍 Blood Donors ki Talash")
+    st.subheader("🔍 Blood Donors ki Directory")
     search_bg = st.selectbox("Blood Group Filter Karein", ["All"] + all_groups)
     
     try:
@@ -69,6 +68,7 @@ elif choice == "Donors Directory":
 
         if not display_df.empty:
             for index, row in display_df.iterrows():
+                # Displaying cards
                 st.markdown(f"""
                     <div style="background: white; padding: 15px; border-radius: 10px; border-left: 10px solid #d32f2f; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <h3 style="margin:0; color:#8b0000;">{row['Name']}</h3>
@@ -77,12 +77,14 @@ elif choice == "Donors Directory":
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Abhi tak koi donor register nahi hua.")
+            st.info("Abhi is group ka koi donor majood nahi hai.")
     except:
-        st.warning("Google Sheet connect nahi ho saki. Link check karein.")
+        st.warning("Data load nahi ho saka. Sheet permissions check karein.")
 
-# --- 3. Help Page ---
 else:
-    st.subheader("💡 Help")
-    st.write("Ye platform Mani Rajput ne Pindi Amolak ki awam ke liye banaya hai takay emergency mein khoon milna asan ho.")
-    st.write("Agar aap donor hain, toh please apna data register karein.")
+    st.subheader("💡 Website Istemal Karne ka Tariqa")
+    st.write("1. **Register Hon:** Agar aap khoon dena chahte hain, toh apni details 'Register as Donor' mein likhein.")
+    st.write("2. **Talash:** Directory mein ja kar matlooba group select karein.")
+    st.write("3. **Rabta:** Seedha 'Call' button daba kar donor se baat karein.")
+    st.markdown("---")
+    st.write("**Created for Welfare Committee Pindi Amolak by Mani Rajput**")
