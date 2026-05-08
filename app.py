@@ -19,9 +19,9 @@ st.markdown("""
         border-radius: 15px; height: 3.8em; font-weight: bold; border: none;
     }
     .donor-card {
-        background: white; padding: 15px; border-radius: 12px; 
-        border-left: 8px solid #990000; margin-bottom: 10px; 
-        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        background: white; padding: 18px; border-radius: 15px; 
+        border-left: 10px solid #990000; margin-bottom: 12px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -41,11 +41,11 @@ if st.session_state.page == "R":
         name = st.text_input("Full Name")
         bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
         city = st.text_input("City", "Pindi Amolak")
-        phone = st.text_input("WhatsApp Number")
+        phone = st.text_input("Mobile Number")
         
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
-                # Aapke Google Form ka Link
+                # Google Form Link
                 form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
                 payload = {
                     "entry.1491566373": name,
@@ -55,46 +55,48 @@ if st.session_state.page == "R":
                 }
                 try:
                     requests.post(form_url, data=payload)
-                    st.success("Data saved! Ek baar Search page refresh karein.")
+                    st.success("Mubarak! Data save ho gaya. Ek baar Search page check karein.")
                     st.balloons()
                 except:
-                    st.error("Error saving data.")
+                    st.error("Connection issue. Try again.")
             else:
-                st.warning("Please fill all fields.")
+                st.warning("Naam aur Number likhna lazmi hai.")
 
-# --- Search Page (Fixing the List Display) ---
+# --- Search Page ---
 else:
     st.subheader("🔍 Donors Directory")
     sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-    # Exporting as CSV for live updates
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
+    # gid=0 means first tab, gid=1957618236 might be for Form Responses
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=1957618236"
     
     try:
-        # data load karte waqt cache bypass karne ke liye ttl=0 ya direct URL use kar rahe hain
         df = pd.read_csv(csv_url)
         
         if not df.empty:
-            # Filter bar
             choice = st.selectbox("Filter by Blood Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
             
-            # Google Forms usually adds a Timestamp as the first column. 
-            # We skip it and match columns.
+            # Aapki sheet ke columns ke mutabiq:
+            # Column 0 (A) = Timestamp (agar form se aa raha hai)
+            # Column 1 (B) = Name
+            # Column 2 (C) = Blood Group
+            # Column 3 (D) = City
+            # Column 4 (E) = Number
+            
             if choice != "All":
-                # Blood Group Column check (usually index 2 or 3 depending on form)
+                # Column index 2 is Blood Group
                 filtered_df = df[df.iloc[:, 2] == choice]
             else:
                 filtered_df = df
 
-            # Reverse the list to show newest donors on top
             for i, row in filtered_df[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
                         <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
                         <p style="margin:5px 0; color:#333;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
-                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:8px; text-decoration:none; border-radius:5px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("Abhi koi donor register nahi hai.")
-    except Exception as e:
-        st.info("Searching for latest donors... Refreshing list.")
+    except:
+        st.info("Searching for donors... (Pehla data aatay hi list show hogi)")
