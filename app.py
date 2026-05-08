@@ -5,10 +5,7 @@ import pandas as pd
 # Page Configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# Force Clear Cache on Startup
-st.cache_data.clear()
-
-# --- CSS: Premium & Clean Look (No Clots) ---
+# --- CSS: Premium & Clean Look ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu, [data-testid="stToolbar"] {
@@ -52,9 +49,14 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# --- Connection Link ---
+# --- Hardcoded Link ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
-conn = st.connection("gsheets", type=GSheetsConnection)
+
+# --- Force Refresh Connection ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception as e:
+    st.error(f"Connection setup mein masla hai: {e}")
 
 # --- Navigation ---
 if 'page' not in st.session_state: st.session_state.page = "S"
@@ -74,36 +76,36 @@ if st.session_state.page == "R":
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
                 try:
-                    # TTL=0 helps to bypass old cache
+                    # ttl=0 is used to get fresh data
                     df = conn.read(spreadsheet=SHEET_URL, ttl=0)
                     new_entry = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
                     updated_df = pd.concat([df, new_entry], ignore_index=True)
                     conn.update(spreadsheet=SHEET_URL, data=updated_df)
-                    st.success("Mubarak! Data save ho gaya.")
+                    st.success("Data Save Ho Gaya!")
                     st.balloons()
                 except Exception as e:
-                    st.error("Connection Error! Ek bar App Reboot karein.")
+                    st.error(f"Error: {e}. Please ensure Sheet is 'Editor' and App is Rebooted.")
             else:
-                st.warning("Naam aur Number lazmi likhein.")
+                st.warning("Naam aur Number likhna lazmi hai.")
 
-# --- Directory Page ---
+# --- Search Page ---
 else:
     st.markdown("<h2 class='blood-header'>🔍 Blood Directory</h2>", unsafe_allow_html=True)
     try:
         data = conn.read(spreadsheet=SHEET_URL, ttl=0)
         if data is not None and not data.empty:
-            choice = st.selectbox("Filter by Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+            choice = st.selectbox("Filter", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
             filtered = data if choice == "All" else data[data["Blood Group"] == choice]
             
             for i, row in filtered.iterrows():
                 st.markdown(f"""
-                    <div style="background:white; padding:18px; border-radius:15px; border-left:10px solid #990000; margin-bottom:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                    <div style="background:white; padding:15px; border-radius:10px; border-left:10px solid #990000; margin-bottom:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <h4 style="margin:0; color:#990000;">{row['Name']}</h4>
-                        <p style="margin:6px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
-                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <p style="margin:5px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
+                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:8px; text-decoration:none; border-radius:5px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("Abhi koi donor register nahi hai.")
     except:
-        st.error("Data load nahi ho raha.")
+        st.info("Wait... loading data.")
