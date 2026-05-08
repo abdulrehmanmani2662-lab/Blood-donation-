@@ -2,99 +2,111 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# 1. Page Config - Icons aur Menu Hide karne ke liye
-st.set_page_config(
-    page_title="Punjab Blood Donation", 
-    page_icon="🩸", 
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+# Page Config
+st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# 2. Custom CSS - Icons aur Footer Hatane ke liye
+# --- CSS: Shining Header & Hide Icons ---
 st.markdown("""
     <style>
-    /* Sab icons aur extra buttons hatane ke liye */
+    /* Hide Everything Faltu */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden !important;}
-    [data-testid="stDecoration"] {display:none !important;}
+    [data-testid="stToolbar"] {display:none;}
+    [data-testid="stDecoration"] {display:none;}
+    div[data-testid="stStatusWidget"] {display:none;}
     
-    /* Design Improvements */
+    /* Shining Animated Header */
     .header-box {
-        background: linear-gradient(135deg, #8b0000 0%, #ff4b4b 100%);
-        padding: 25px;
+        background: linear-gradient(-45deg, #8b0000, #ff4b4b, #d32f2f, #8b0000);
+        background-size: 400% 400%;
+        animation: gradient 5s ease infinite;
+        padding: 20px;
         border-radius: 15px;
         text-align: center;
         color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+    }
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    /* Mobile Menu Buttons */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Header Section ---
+# --- Shining Header ---
 st.markdown("""
     <div class="header-box">
-        <h1 style='margin:0; font-size: 28px;'>🩸 PUNJAB BLOOD DONATION</h1>
-        <p style='margin:5px 0; font-size: 18px;'>Welfare Committee Pindi Amolak</p>
-        <p style='margin:0; font-size: 12px; opacity: 0.8;'>Created by: Mani Rajput</p>
+        <h1 style='margin:0; font-size: 24px;'>PUNJAB BLOOD DONATION</h1>
+        <p style='margin:0; font-size: 16px;'>Welfare Committee Pindi Amolak</p>
+        <p style='margin:0; font-size: 10px; opacity:0.7;'>By: Mani Rajput</p>
     </div>
     """, unsafe_allow_html=True)
 
-# --- Google Sheets Connection ---
-sheet_url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
+# --- Database Connection ---
+url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def load_data():
-    return conn.read(spreadsheet=sheet_url, usecols=[0, 1, 2, 3])
+# --- Navigation (Buttons Instead of Sidebar) ---
+col1, col2 = st.columns(2)
+with col1:
+    btn_search = st.button("🔍 Find Donor")
+with col2:
+    btn_reg = st.button("📝 Register Me")
 
-# --- Sidebar Menu (Bohat Wazeh) ---
-st.sidebar.header("📋 MAIN MENU")
-choice = st.sidebar.selectbox(
-    "Option Select Karein:", 
-    ["Donors Directory", "Register as Donor", "About/Help"]
-)
+# Session State for Menu
+if 'page' not in st.session_state:
+    st.session_state.page = "Search"
 
-all_groups = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]
+if btn_search: st.session_state.page = "Search"
+if btn_reg: st.session_state.page = "Register"
 
-# --- Logical Switching ---
+# --- Page Logic ---
 
-if choice == "Register as Donor":
-    st.subheader("📝 Naya Donor Shamil Karein")
-    with st.form("main_form", clear_on_submit=True):
-        name = st.text_input("Naam")
-        bg = st.selectbox("Blood Group", all_groups)
-        city = st.text_input("Shehar", value="Pindi Amolak")
-        phone = st.text_input("Mobile/WhatsApp")
+if st.session_state.page == "Register":
+    st.markdown("### 📝 Register as Donor")
+    with st.form("my_form", clear_on_submit=True):
+        name = st.text_input("Aapka Naam")
+        bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+        city = st.text_input("Shehar", "Pindi Amolak")
+        phone = st.text_input("Phone/WhatsApp")
         
-        if st.form_submit_button("Save Karein"):
+        if st.form_submit_button("Save Data"):
             if name and phone:
                 try:
-                    df = load_data()
+                    df = conn.read(spreadsheet=url, usecols=[0,1,2,3])
                     new_row = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
-                    updated_df = pd.concat([df, new_row], ignore_index=True)
-                    conn.update(spreadsheet=sheet_url, data=updated_df)
-                    st.success("Mubarak ho! Data save ho gaya.")
+                    df_final = pd.concat([df, new_row], ignore_index=True)
+                    conn.update(spreadsheet=url, data=df_final)
+                    st.success("Mubarak! Data Save Ho Gaya.")
                     st.balloons()
-                except:
-                    st.error("Sheet Connection Error!")
+                except Exception as e:
+                    st.error("Error: Please check Google Sheet permissions.")
             else:
-                st.warning("Naam aur Number lazmi hain.")
+                st.warning("Naam aur Number likhein.")
 
-elif choice == "Donors Directory":
-    st.subheader("🔍 Donors ki Talash")
-    search_bg = st.selectbox("Blood Group Filter", ["All"] + all_groups)
-    
+else:
+    st.markdown("### 🔍 Donors Directory")
     try:
-        df = load_data()
-        res = df if search_bg == "All" else df[df["Blood Group"] == search_bg]
+        data = conn.read(spreadsheet=url, usecols=[0,1,2,3])
+        search = st.selectbox("Filter by Blood Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
         
-        if not res.empty:
-            for i, row in res.iterrows():
+        filtered = data if search == "All" else data[data["Blood Group"] == search]
+        
+        if not filtered.empty:
+            for i, row in filtered.iterrows():
                 st.markdown(f"""
-                    <div style="background:white; padding:15px; border-radius:10px; border-left:8px solid #8b0000; margin-bottom:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    <div style="background:white; padding:15px; border-radius:10px; border-left:8px solid #d32f2f; margin-bottom:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <h4 style="margin:0; color:#8b0000;">{row['Name']}</h4>
                         <p style="margin:5px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
                         <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:8px 15px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">📞 Call Now</a>
@@ -103,11 +115,4 @@ elif choice == "Donors Directory":
         else:
             st.info("Koi donor nahi mila.")
     except:
-        st.error("Data load nahi ho saka.")
-
-else:
-    st.subheader("💡 Website Istemal Karne ka Tariqa")
-    st.write("1. Sidebar se 'Register' select karke apna naam likhein.")
-    st.write("2. 'Directory' mein ja kar blood group search karein.")
-    st.markdown("---")
-    st.write("**Welfare Committee Pindi Amolak**")
+        st.error("Abhi tak koi data nahi hai ya link sahi nahi hai.")
