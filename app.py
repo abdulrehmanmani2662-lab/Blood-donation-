@@ -26,6 +26,7 @@ st.markdown("""
         text-transform: uppercase;
         border-bottom: 3px solid #B22222;
         padding-bottom: 10px;
+        font-size: 22px;
     }
     .stButton>button {
         width: 100%;
@@ -34,7 +35,7 @@ st.markdown("""
         color: white;
         font-weight: bold;
         border: none;
-        height: 3em;
+        height: 3.5em;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -49,7 +50,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- Connection ---
-# Yahan aapka naya link use ho raha hai
 url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -71,25 +71,23 @@ if st.session_state.page == "R":
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
                 try:
-                    # Fresh data read (ttl=0)
                     df = conn.read(spreadsheet=url, ttl=0)
                     new_row = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
                     updated_df = pd.concat([df, new_row], ignore_index=True)
-                    # Update Sheet
                     conn.update(spreadsheet=url, data=updated_df)
                     st.success("Data Save Ho Gaya!")
                     st.balloons()
                 except Exception as e:
-                    st.error("Permission Issue! Please check if Sheet is set to 'Anyone with link can EDIT'.")
+                    st.error("Permission Issue! Please check if Sheet is set to 'Editor' mode.")
             else:
                 st.warning("Naam aur Number likhna lazmi hai.")
 
 # --- Search Page ---
 else:
-    st.markdown("<h2 class='blood-header'>🔍 Donors List</h2>", unsafe_allow_header=True)
+    st.markdown("<h2 class='blood-header'>🔍 Donors List</h2>", unsafe_allow_html=True)
     try:
         data = conn.read(spreadsheet=url, ttl=0)
-        if not data.empty:
+        if data is not None and not data.empty:
             group = st.selectbox("Blood Group Filter", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
             filt = data if group == "All" else data[data["Blood Group"] == group]
             
@@ -98,10 +96,10 @@ else:
                     <div style="background:white; padding:15px; border-radius:10px; border-left:10px solid #B22222; margin-bottom:10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <h4 style="margin:0; color:#B22222;">{row['Name']}</h4>
                         <p style="margin:5px 0;">🩸 {row['Blood Group']} | 📍 {row['City']}</p>
-                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:8px 15px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block;">📞 CALL</a>
+                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:8px 15px; text-decoration:none; border-radius:5px; font-weight:bold; display:inline-block; width:100%; text-align:center;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("Abhi koi donor register nahi hai.")
     except:
-        st.error("Sheet read nahi ho rahi. Permissions check karein.")
+        st.error("Database connection error.")
