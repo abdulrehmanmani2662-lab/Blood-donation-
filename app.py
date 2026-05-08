@@ -5,109 +5,96 @@ import requests
 # Page Configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Premium & Clean Look (No Clots) ---
+# --- CSS: Premium Design ---
 st.markdown("""
     <style>
-    header, footer, .stDeployButton, #MainMenu, [data-testid="stToolbar"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
+    header, footer, .stDeployButton, #MainMenu { display: none !important; }
     .header-box {
         background: linear-gradient(135deg, #7d0000 0%, #ff1a1a 50%, #7d0000 100%);
-        padding: 30px;
-        border-radius: 25px;
-        text-align: center;
-        color: white;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        padding: 30px; border-radius: 25px; text-align: center; color: white;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 25px;
     }
     .stButton>button {
-        width: 100%;
-        background-color: #990000;
-        color: white;
-        border-radius: 15px;
-        height: 3.8em;
-        font-weight: bold;
-        border: none;
-        transition: 0.3s;
+        width: 100%; background-color: #990000; color: white;
+        border-radius: 15px; height: 3.8em; font-weight: bold; border: none;
     }
-    .stButton>button:hover {
-        background-color: #ff0000;
-        transform: scale(1.02);
+    .donor-card {
+        background: white; padding: 15px; border-radius: 12px; 
+        border-left: 8px solid #990000; margin-bottom: 10px; 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Header ---
-st.markdown("""
-    <div class="header-box">
-        <div style='font-size: 45px; margin-bottom: 10px;'>🩸</div>
-        <h1 style='margin:0; font-size: 24px; font-weight: 900;'>PUNJAB BLOOD DONATION</h1>
-        <p style='margin:5px 0; font-size: 16px; opacity: 0.9;'>Welfare Committee Pindi Amolak</p>
-        <p style='font-size: 10px; margin-top:10px;'>Dev: <b>Mani Rajput</b></p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown('<div class="header-box"><h1>🩸 PUNJAB BLOOD</h1><p>Welfare Committee Pindi Amolak</p></div>', unsafe_allow_html=True)
 
-# --- Navigation ---
+# Navigation
 if 'page' not in st.session_state: st.session_state.page = "S"
 c1, c2 = st.columns(2)
 if c1.button("🔍 FIND DONOR"): st.session_state.page = "S"
 if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
-# --- Registration Page (Via Google Form Bridge) ---
+# --- Registration Page ---
 if st.session_state.page == "R":
-    st.markdown("<h3 style='color:#990000;'>📝 Join as a Donor</h3>", unsafe_allow_html=True)
+    st.subheader("📝 Register New Donor")
     with st.form("reg_form", clear_on_submit=True):
-        name = st.text_input("Aapka Naam")
+        name = st.text_input("Full Name")
         bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-        city = st.text_input("Shehar (City)", "Pindi Amolak")
-        phone = st.text_input("WhatsApp/Mobile Number")
+        city = st.text_input("City", "Pindi Amolak")
+        phone = st.text_input("WhatsApp Number")
         
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
-                # Google Form URL
+                # Aapke Google Form ka Link
                 form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
-                
-                # Entry IDs for your specific form
                 payload = {
-                    "entry.1491566373": name,   # Name ID
-                    "entry.1741517409": bg,     # Blood Group ID
-                    "entry.1945112345": city,   # City ID (Approx ID)
-                    "entry.1235116789": phone   # Contact ID
+                    "entry.1491566373": name,
+                    "entry.1741517409": bg,
+                    "entry.1945112345": city,
+                    "entry.1235116789": phone
                 }
-                
                 try:
-                    # Sending data to Google Form
                     requests.post(form_url, data=payload)
-                    st.success("Mubarak! Aapka data save ho gaya aur directory mein shamil kar diya gaya hai.")
+                    st.success("Data saved! Ek baar Search page refresh karein.")
                     st.balloons()
                 except:
-                    st.error("Connection slow hai, dobara koshish karein.")
+                    st.error("Error saving data.")
             else:
-                st.warning("Naam aur Number lazmi likhein.")
+                st.warning("Please fill all fields.")
 
-# --- Search Page (Using CSV Export for Zero-Permission Issues) ---
+# --- Search Page (Fixing the List Display) ---
 else:
-    st.markdown("<h3 style='color:#990000;'>🔍 Search Donors</h3>", unsafe_allow_html=True)
-    # Aapki sheet ka public ID
+    st.subheader("🔍 Donors Directory")
     sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+    # Exporting as CSV for live updates
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid=0"
     
     try:
+        # data load karte waqt cache bypass karne ke liye ttl=0 ya direct URL use kar rahe hain
         df = pd.read_csv(csv_url)
+        
         if not df.empty:
+            # Filter bar
             choice = st.selectbox("Filter by Blood Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            filtered = df if choice == "All" else df[df.iloc[:, 1] == choice] # Assuming Blood Group is Column 2
             
-            for i, row in filtered.iterrows():
+            # Google Forms usually adds a Timestamp as the first column. 
+            # We skip it and match columns.
+            if choice != "All":
+                # Blood Group Column check (usually index 2 or 3 depending on form)
+                filtered_df = df[df.iloc[:, 2] == choice]
+            else:
+                filtered_df = df
+
+            # Reverse the list to show newest donors on top
+            for i, row in filtered_df[::-1].iterrows():
                 st.markdown(f"""
-                    <div style="background:white; padding:15px; border-radius:12px; border-left:10px solid #990000; margin-bottom:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[0]}</h4>
-                        <p style="margin:5px 0; color:#333;">🩸 <b>{row.iloc[1]}</b> | 📍 {row.iloc[2]}</p>
-                        <a href="tel:{row.iloc[3]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                    <div class="donor-card">
+                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
+                        <p style="margin:5px 0; color:#333;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
+                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:8px; text-decoration:none; border-radius:5px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Abhi tak koi donor register nahi hua.")
-    except:
-        st.info("Searching for donors... (Pehla data enter hotay hi list show ho jayegi)")
+            st.info("Abhi koi donor register nahi hai.")
+    except Exception as e:
+        st.info("Searching for latest donors... Refreshing list.")
