@@ -3,72 +3,105 @@ import pandas as pd
 import requests
 import time
 
-# Page Config
-st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸")
+# Page Configuration
+st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS Mani Rajput Style ---
+# --- CSS: Mani Rajput Special ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
     .header-box {
         background: linear-gradient(135deg, #7d0000 0%, #ff1a1a 50%, #7d0000 100%);
-        padding: 30px; border-radius: 25px; text-align: center; color: white;
+        padding: 30px; border-radius: 20px; text-align: center; color: white;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 25px;
     }
+    .stButton>button {
+        width: 100%; background-color: #990000; color: white;
+        border-radius: 12px; height: 3.5em; font-weight: bold; border: none;
+    }
     .donor-card {
-        background: white; padding: 18px; border-radius: 15px; 
-        border-left: 10px solid #990000; margin-bottom: 12px; 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        background: white; padding: 15px; border-radius: 12px; 
+        border-left: 8px solid #990000; margin-bottom: 10px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+    .manual-link {
+        text-align: center; padding: 10px; background: #fff3cd; 
+        border-radius: 10px; color: #856404; font-size: 13px; margin-top: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown('<div class="header-box"><h1>PUNJAB BLOOD DONATION</h1><p>Created by: Mani Rajput</p></div>', unsafe_allow_html=True)
+# Header
+st.markdown(f"""
+    <div class="header-box">
+        <h1 style='margin:0; font-size: 26px; font-weight: 900;'>PUNJAB BLOOD DONATION</h1>
+        <p style='margin:5px 0;'>Welfare Committee Pindi Amolak</p>
+        <p style='font-size: 12px; margin-top:10px;'>Created by: <b>Mani Rajput</b></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+if 'page' not in st.session_state: st.session_state.page = "S"
 
 # Navigation
-if 'page' not in st.session_state: st.session_state.page = "S"
 c1, c2 = st.columns(2)
 if c1.button("🔍 FIND DONOR"): st.session_state.page = "S"
 if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
-# --- DATABASE URL (Fresh Link) ---
-SHEET_ID = "1wi_ltnwCrsTmjj0JvXTxf4EvGuayqeV4s6SV9U91pxc"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-
+# --- REGISTRATION ---
 if st.session_state.page == "R":
+    st.markdown("<h3 style='color:#990000;'>📝 Register</h3>", unsafe_allow_html=True)
+    
+    # Direct Form Link for Backup
+    direct_form = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/viewform"
+    
     with st.form("reg_form", clear_on_submit=True):
-        name = st.text_input("Name")
-        bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-        city = st.text_input("City", "Pindi Amolak")
-        phone = st.text_input("Number")
+        n = st.text_input("Name")
+        b = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+        c = st.text_input("City", "Pindi Amolak")
+        p = st.text_input("Mobile Number")
         
         if st.form_submit_button("SAVE DATA"):
-            # Hum Google Form use karenge kyunke ye kabhi block nahi hota
-            form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
-            payload = {"entry.1491566373": name, "entry.1741517409": bg, "entry.1945112345": city, "entry.1235116789": phone}
-            try:
-                requests.post(form_url, data=payload)
-                st.success("Data Saved! Redirecting...")
-                time.sleep(1)
-                st.session_state.page = "S"
-                st.rerun()
-            except:
-                st.error("Error saving! Try again.")
+            if n and p:
+                f_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
+                payload = {"entry.1491566373": n, "entry.1741517409": b, "entry.1945112345": c, "entry.1235116789": p}
+                try:
+                    res = requests.post(f_url, data=payload, timeout=10)
+                    if res.status_code == 200 or res.status_code == 302:
+                        st.success("Mubarak! Save ho gaya.")
+                        time.sleep(1)
+                        st.session_state.page = "S"
+                        st.rerun()
+                    else:
+                        st.error("Form error! Niche wale link se register karein.")
+                except:
+                    st.error("Network issue! Niche wala link use karein.")
+            else:
+                st.warning("Pura form bharein.")
+    
+    st.markdown(f"""<div class="manual-link">Agar upar wala button kaam na kare toh <a href="{direct_form}" target="_blank">Yahan Click Karke</a> register karein.</div>""", unsafe_allow_html=True)
 
+# --- LIST ---
 else:
+    st.markdown("<h3 style='color:#990000;'>🔍 Donors List</h3>", unsafe_allow_html=True)
+    sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
+    gid = "2137978586"
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache={int(time.time())}"
+    
     try:
-        # Cache bypass ke liye timestamp
-        df = pd.read_csv(f"{CSV_URL}&t={int(time.time())}")
+        df = pd.read_csv(csv_url)
         if not df.empty:
-            for i, row in df[::-1].iterrows():
+            choice = st.selectbox("Filter", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+            f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
+
+            for i, row in f_df[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[0]}</h4>
-                        <p style="margin:5px 0;">🩸 <b>{row.iloc[1]}</b> | 📍 {row.iloc[2]}</p>
-                        <a href="tel:{row.iloc[3]}" style="background:#28a745; color:white; padding:8px; text-decoration:none; border-radius:8px; display:block; text-align:center;">📞 CALL</a>
+                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
+                        <p style="margin:5px 0;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
+                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("No donors found.")
     except:
-        st.write("Loading list...")
+        st.info("Loading list...")
