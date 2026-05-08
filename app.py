@@ -16,8 +16,13 @@ st.markdown("""
     }
     .donor-card {
         background: white; padding: 15px; border-radius: 12px; 
-        border-left: 8px solid #990000; margin-bottom: 10px; 
+        border-left: 10px solid #990000; margin-bottom: 10px; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .number-box {
+        background: #f8f9fa; border: 1px dashed #990000;
+        padding: 8px; border-radius: 8px; margin: 10px 0;
+        font-family: monospace; font-size: 18px; text-align: center; color: #333;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -27,8 +32,7 @@ st.markdown('<div class="header-box"><h1>PUNJAB BLOOD DONATION</h1><p>Welfare Co
 # CONFIG
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQpVR9WP3Ek_YHBmQkGijcBbaL7wmY6_tgPHtFVQEDt6Qs4Be0U0zIS6psCh2i1cJU/exec"
 SHEET_ID = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-# Direct Export Link with forced CSV
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=2137978586"
 
 if 'page' not in st.session_state: st.session_state.page = "S"
 
@@ -39,7 +43,7 @@ if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
 # --- REGISTRATION ---
 if st.session_state.page == "R":
-    with st.form("final_reg", clear_on_submit=True):
+    with st.form("reg", clear_on_submit=True):
         n = st.text_input("Name")
         b = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
         c = st.text_input("City", "Pindi Amolak")
@@ -47,38 +51,45 @@ if st.session_state.page == "R":
         if st.form_submit_button("SAVE DATA"):
             if n and p:
                 try:
-                    requests.post(WEB_APP_URL, json={"name": n, "bg": b, "city": c, "phone": p}, timeout=10)
-                    st.success("Saving to Sheet... Please wait.")
-                    time.sleep(2)
+                    requests.post(WEB_APP_URL, json={"name": n, "bg": b, "city": c, "phone": p}, allow_redirects=True)
+                    st.success("Save ho gaya!")
+                    time.sleep(1)
                     st.session_state.page = "S"
                     st.rerun()
                 except:
-                    st.error("Submission error - but check sheet.")
+                    st.error("Error saving.")
 
-# --- LIST PAGE (Super Simplified) ---
+# --- LIST PAGE ---
 else:
     st.cache_data.clear()
     try:
-        # Fetching fresh data
-        raw_data = pd.read_csv(f"{CSV_URL}&t={int(time.time())}")
-        
-        if not raw_data.empty:
-            # We skip filtering for a second just to see if ANY data shows up
-            st.write(f"Total Donors Found: {len(raw_data)}")
-            
-            for i, row in raw_data[::-1].iterrows():
-                # Displaying whatever is in the columns 1, 2, 3, 4
-                try:
-                    st.markdown(f"""
-                    <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
-                        <p style="margin:5px 0;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
-                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+        df = pd.read_csv(f"{CSV_URL}&v={int(time.time())}")
+        if not df.empty:
+            choice = st.selectbox("Filter Blood Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+            f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
+
+            for i, row in f_df[::-1].iterrows():
+                name = row.iloc[1]
+                blood = row.iloc[2]
+                city = row.iloc[3]
+                phone = str(row.iloc[4]) # Phone number as string
+                
+                st.markdown(f"""
+                <div class="donor-card">
+                    <h4 style="margin:0; color:#990000;">{name}</h4>
+                    <p style="margin:5px 0;">🩸 <b>{blood}</b> | 📍 {city}</p>
+                    
+                    <div class="number-box">
+                        📞 {phone}
                     </div>
-                    """, unsafe_allow_html=True)
-                except:
-                    continue
+
+                    <div style="display: flex; gap: 10px;">
+                        <a href="tel:{phone}" style="flex: 1; background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; text-align:center; font-weight:bold;">CALL</a>
+                        <button onclick="navigator.clipboard.writeText('{phone}')" style="flex: 1; background:#007bff; color:white; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">COPY</button>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.warning("No data found in sheet yet.")
-    except Exception as e:
-        st.info("Refreshing donors list... wait 5 seconds.")
+            st.warning("No donors found.")
+    except:
+        st.info("Refreshing list...")
