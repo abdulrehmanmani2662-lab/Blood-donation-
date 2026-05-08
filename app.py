@@ -1,12 +1,12 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import requests
 import time
 
 # Page Configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Mani Rajput Design ---
+# --- CSS: Mani Rajput Premium Design ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
@@ -36,10 +36,9 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# Sheet Connection
-# Mani bhai, ye aapka bheja hua link hai
-url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
-conn = st.connection("gsheets", type=GSheetsConnection)
+# --- CONFIG: Google Script URL ---
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwI7vnL06aTJQirX1LvnfdGJObf3l_z_ogmpLaeUctq7SQbI1BO_gjWS31Z5rGkex_m/exec"
+SHEET_CSV = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/export?format=csv&gid=0"
 
 if 'page' not in st.session_state: st.session_state.page = "S"
 
@@ -50,50 +49,47 @@ if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
 # --- REGISTRATION ---
 if st.session_state.page == "R":
-    st.subheader("📝 Join Now")
+    st.markdown("<h3 style='color:#990000;'>📝 Join as a Donor</h3>", unsafe_allow_html=True)
     with st.form("reg_form", clear_on_submit=True):
-        name = st.text_input("Full Name")
+        name = st.text_input("Aapka Naam")
         bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-        city = st.text_input("City", "Pindi Amolak")
-        phone = st.text_input("Contact Number")
+        city = st.text_input("Shehar", "Pindi Amolak")
+        phone = st.text_input("Mobile Number")
         
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
                 try:
-                    # Pehle purana data read karo
-                    df = conn.read(spreadsheet=url, ttl=0)
-                    # Naya data add karo
-                    new_entry = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
-                    updated_df = pd.concat([df, new_entry], ignore_index=True)
-                    # Sheet update karo
-                    conn.update(spreadsheet=url, data=updated_df)
-                    st.success("Mubarak! Data sheet mein save ho gaya.")
-                    time.sleep(1.5)
+                    # Data sending to Google Script
+                    requests.post(WEB_APP_URL, json={"name": name, "bg": bg, "city": city, "phone": phone})
+                    st.success("Mubarak! Data Save ho gaya.")
+                    time.sleep(2)
                     st.session_state.page = "S"
                     st.rerun()
                 except:
-                    st.error("Error! Sheet ki permissions check karein (Editor mode zaroori hai).")
+                    st.error("Technical Error! Check Script Deployment.")
             else:
-                st.warning("Pura form bharein.")
+                st.warning("Naam aur Number lazmi likhein.")
 
 # --- DONOR LIST ---
 else:
-    st.subheader("🔍 Donors Directory")
+    st.markdown("<h3 style='color:#990000;'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
     try:
-        data = conn.read(spreadsheet=url, ttl=0)
-        if not data.empty:
-            choice = st.selectbox("Filter", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            filtered = data if choice == "All" else data[data["Blood Group"] == choice]
-            
-            for i, row in filtered[::-1].iterrows():
+        # Cache bypass using timestamp
+        df = pd.read_csv(f"{SHEET_CSV}&t={int(time.time())}")
+        if not df.empty:
+            choice = st.selectbox("Filter by Blood", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+            # Index based data access
+            f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
+
+            for i, row in f_df[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row['Name']}</h4>
-                        <p style="margin:5px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
-                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
+                        <p style="margin:5px 0;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
+                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("Abhi koi donor register nahi hai.")
+            st.info("Abhi koi donor registered nahi hai.")
     except:
-        st.write("Loading list... Agar sheet bilkul khali hai toh pehla donor register karein.")
+        st.info("Loading donors list...")
