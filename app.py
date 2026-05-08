@@ -27,7 +27,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Header
+# Header Section
 st.markdown(f"""
     <div class="header-box">
         <h1 style='margin:0; font-size: 26px; font-weight: 900;'>PUNJAB BLOOD DONATION</h1>
@@ -36,8 +36,8 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- CONFIG: Google Script URL ---
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwI7vnL06aTJQirX1LvnfdGJObf3l_z_ogmpLaeUctq7SQbI1BO_gjWS31Z5rGkex_m/exec"
+# --- CONFIG: Naya Google Script URL ---
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQpVR9WP3Ek_YHBmQkGijcBbaL7wmY6_tgPHtFVQEDt6Qs4Be0U0zIS6psCh2i1cJU/exec"
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/export?format=csv&gid=0"
 
 if 'page' not in st.session_state: st.session_state.page = "S"
@@ -47,7 +47,7 @@ c1, c2 = st.columns(2)
 if c1.button("🔍 FIND DONOR"): st.session_state.page = "S"
 if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
-# --- REGISTRATION ---
+# --- REGISTRATION PAGE ---
 if st.session_state.page == "R":
     st.markdown("<h3 style='color:#990000;'>📝 Join as a Donor</h3>", unsafe_allow_html=True)
     with st.form("reg_form", clear_on_submit=True):
@@ -59,18 +59,18 @@ if st.session_state.page == "R":
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
                 try:
-                    # Data sending to Google Script
-                    requests.post(WEB_APP_URL, json={"name": name, "bg": bg, "city": city, "phone": phone})
+                    # 'allow_redirects=True' Google Script ke liye lazmi hai
+                    requests.post(WEB_APP_URL, json={"name": name, "bg": bg, "city": city, "phone": phone}, allow_redirects=True)
                     st.success("Mubarak! Data Save ho gaya.")
                     time.sleep(2)
                     st.session_state.page = "S"
                     st.rerun()
-                except:
-                    st.error("Technical Error! Check Script Deployment.")
+                except Exception as e:
+                    st.error("Technical Error! Check internet or Script deployment.")
             else:
                 st.warning("Naam aur Number lazmi likhein.")
 
-# --- DONOR LIST ---
+# --- DONOR LIST PAGE ---
 else:
     st.markdown("<h3 style='color:#990000;'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
     try:
@@ -78,7 +78,7 @@ else:
         df = pd.read_csv(f"{SHEET_CSV}&t={int(time.time())}")
         if not df.empty:
             choice = st.selectbox("Filter by Blood", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            # Index based data access
+            # Index-based data fetch (1=Name, 2=Blood Group, 3=City, 4=Contact)
             f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
 
             for i, row in f_df[::-1].iterrows():
@@ -92,4 +92,4 @@ else:
         else:
             st.info("Abhi koi donor registered nahi hai.")
     except:
-        st.info("Loading donors list...")
+        st.info("Loading donors list... Please wait.")
