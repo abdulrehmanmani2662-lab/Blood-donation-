@@ -6,23 +6,39 @@ import time
 # Page Config
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Mani Rajput Design ---
+# --- CSS: Mani Rajput VIP Design ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
+    
+    /* Branding Box */
+    .brand-box {
+        background: linear-gradient(135deg, #000000 0%, #434343 100%);
+        padding: 15px;
+        border-radius: 15px;
+        text-align: center;
+        color: #FFD700; /* Golden Color */
+        border: 2px solid #FFD700;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    
     .header-box {
         background: linear-gradient(135deg, #7d0000 0%, #ff1a1a 50%, #7d0000 100%);
         padding: 25px; border-radius: 20px; text-align: center; color: white; margin-bottom: 20px;
     }
+    
     .donor-card {
         background: white; padding: 15px; border-radius: 12px; 
         border-left: 10px solid #990000; margin-bottom: 15px; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.1); color: black;
     }
+    
     .number-display {
         font-size: 22px; font-weight: bold; color: #990000; 
         text-align: center; margin: 10px 0; letter-spacing: 1px;
     }
+    
     .call-btn {
         background-color: #28a745; color: white !important; 
         padding: 12px; border-radius: 10px; display: block; 
@@ -32,6 +48,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# --- VIP BRANDING SECTION ---
+st.markdown("""
+    <div class="brand-box">
+        <span style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Developed & Managed By</span><br>
+        <span style="font-size: 32px; font-weight: 900; font-family: 'Arial Black', Gadget, sans-serif;">MANI RAJPUT</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Main Header
 st.markdown('<div class="header-box"><h1>PUNJAB BLOOD DONATION</h1><p>Welfare Committee Pindi Amolak</p></div>', unsafe_allow_html=True)
 
 # CONFIG
@@ -62,18 +87,15 @@ if st.session_state.page == "R":
         
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
-                # Sirf processing dikhayega jab tak save ho raha hai
-                with st.spinner("Saving your data..."):
+                with st.spinner("Saving data..."):
                     try:
-                        # Timeout ko 30 seconds kar diya hai takay error na aaye
                         requests.post(WEB_APP_URL, json={"name": name, "bg": bg, "city": city, "phone": phone}, timeout=30)
                         st.success("Mubarak! Data Save ho gaya.")
                         time.sleep(2)
                         st.session_state.page = "S"
                         st.rerun()
                     except:
-                        # Agar sheet mein data aa raha hai toh ye error bhi ignore karein
-                        st.success("Registration Successful! Checking list...")
+                        st.success("Registration Successful! Redirecting...")
                         time.sleep(2)
                         st.session_state.page = "S"
                         st.rerun()
