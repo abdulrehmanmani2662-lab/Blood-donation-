@@ -1,12 +1,12 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-import requests
 import time
 
 # Page Configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Mani Rajput Special ---
+# --- CSS: Mani Rajput Design ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
@@ -24,10 +24,6 @@ st.markdown("""
         border-left: 8px solid #990000; margin-bottom: 10px; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     }
-    .manual-link {
-        text-align: center; padding: 10px; background: #fff3cd; 
-        border-radius: 10px; color: #856404; font-size: 13px; margin-top: 10px;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -40,6 +36,11 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
+# Sheet Connection
+# Mani bhai, ye aapka bheja hua link hai
+url = "https://docs.google.com/spreadsheets/d/1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8/edit?usp=sharing"
+conn = st.connection("gsheets", type=GSheetsConnection)
+
 if 'page' not in st.session_state: st.session_state.page = "S"
 
 # Navigation
@@ -49,59 +50,50 @@ if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
 # --- REGISTRATION ---
 if st.session_state.page == "R":
-    st.markdown("<h3 style='color:#990000;'>📝 Register</h3>", unsafe_allow_html=True)
-    
-    # Direct Form Link for Backup
-    direct_form = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/viewform"
-    
+    st.subheader("📝 Join Now")
     with st.form("reg_form", clear_on_submit=True):
-        n = st.text_input("Name")
-        b = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-        c = st.text_input("City", "Pindi Amolak")
-        p = st.text_input("Mobile Number")
+        name = st.text_input("Full Name")
+        bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
+        city = st.text_input("City", "Pindi Amolak")
+        phone = st.text_input("Contact Number")
         
         if st.form_submit_button("SAVE DATA"):
-            if n and p:
-                f_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
-                payload = {"entry.1491566373": n, "entry.1741517409": b, "entry.1945112345": c, "entry.1235116789": p}
+            if name and phone:
                 try:
-                    res = requests.post(f_url, data=payload, timeout=10)
-                    if res.status_code == 200 or res.status_code == 302:
-                        st.success("Mubarak! Save ho gaya.")
-                        time.sleep(1)
-                        st.session_state.page = "S"
-                        st.rerun()
-                    else:
-                        st.error("Form error! Niche wale link se register karein.")
+                    # Pehle purana data read karo
+                    df = conn.read(spreadsheet=url, ttl=0)
+                    # Naya data add karo
+                    new_entry = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
+                    updated_df = pd.concat([df, new_entry], ignore_index=True)
+                    # Sheet update karo
+                    conn.update(spreadsheet=url, data=updated_df)
+                    st.success("Mubarak! Data sheet mein save ho gaya.")
+                    time.sleep(1.5)
+                    st.session_state.page = "S"
+                    st.rerun()
                 except:
-                    st.error("Network issue! Niche wala link use karein.")
+                    st.error("Error! Sheet ki permissions check karein (Editor mode zaroori hai).")
             else:
                 st.warning("Pura form bharein.")
-    
-    st.markdown(f"""<div class="manual-link">Agar upar wala button kaam na kare toh <a href="{direct_form}" target="_blank">Yahan Click Karke</a> register karein.</div>""", unsafe_allow_html=True)
 
-# --- LIST ---
+# --- DONOR LIST ---
 else:
-    st.markdown("<h3 style='color:#990000;'>🔍 Donors List</h3>", unsafe_allow_html=True)
-    sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-    gid = "2137978586"
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache={int(time.time())}"
-    
+    st.subheader("🔍 Donors Directory")
     try:
-        df = pd.read_csv(csv_url)
-        if not df.empty:
+        data = conn.read(spreadsheet=url, ttl=0)
+        if not data.empty:
             choice = st.selectbox("Filter", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
-
-            for i, row in f_df[::-1].iterrows():
+            filtered = data if choice == "All" else data[data["Blood Group"] == choice]
+            
+            for i, row in filtered[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
-                        <p style="margin:5px 0;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
-                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <h4 style="margin:0; color:#990000;">{row['Name']}</h4>
+                        <p style="margin:5px 0;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
+                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("No donors found.")
+            st.info("Abhi koi donor register nahi hai.")
     except:
-        st.info("Loading list...")
+        st.write("Loading list... Agar sheet bilkul khali hai toh pehla donor register karein.")
