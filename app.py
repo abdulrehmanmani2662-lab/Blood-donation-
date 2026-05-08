@@ -4,9 +4,9 @@ import requests
 import time
 
 # Page Config
-st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
+st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸")
 
-# --- CSS: Mani Rajput Design ---
+# --- CSS Mani Rajput Style ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
@@ -14,10 +14,6 @@ st.markdown("""
         background: linear-gradient(135deg, #7d0000 0%, #ff1a1a 50%, #7d0000 100%);
         padding: 30px; border-radius: 25px; text-align: center; color: white;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin-bottom: 25px;
-    }
-    .stButton>button {
-        width: 100%; background-color: #990000; color: white;
-        border-radius: 12px; height: 3.5em; font-weight: bold; border: none;
     }
     .donor-card {
         background: white; padding: 18px; border-radius: 15px; 
@@ -27,85 +23,52 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Header
-st.markdown(f"""
-    <div class="header-box">
-        <h1 style='margin:0; font-size: 26px; font-weight: 900;'>PUNJAB BLOOD DONATION</h1>
-        <p style='margin:5px 0;'>Welfare Committee Pindi Amolak</p>
-        <p style='font-size: 12px; margin-top:10px;'>Created by: <b>Mani Rajput</b></p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown('<div class="header-box"><h1>PUNJAB BLOOD DONATION</h1><p>Created by: Mani Rajput</p></div>', unsafe_allow_html=True)
 
-# Page logic
-if 'page' not in st.session_state:
-    st.session_state.page = "S"
-
-# Navigation Buttons
+# Navigation
+if 'page' not in st.session_state: st.session_state.page = "S"
 c1, c2 = st.columns(2)
-if c1.button("🔍 FIND DONOR"):
-    st.session_state.page = "S"
-if c2.button("📝 REGISTER ME"):
-    st.session_state.page = "R"
+if c1.button("🔍 FIND DONOR"): st.session_state.page = "S"
+if c2.button("📝 REGISTER ME"): st.session_state.page = "R"
 
-# --- REGISTRATION PAGE ---
+# --- DATABASE URL (Fresh Link) ---
+SHEET_ID = "1wi_ltnwCrsTmjj0JvXTxf4EvGuayqeV4s6SV9U91pxc"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+
 if st.session_state.page == "R":
-    st.markdown("<h3 style='color:#990000;'>📝 Register New Donor</h3>", unsafe_allow_html=True)
     with st.form("reg_form", clear_on_submit=True):
-        name = st.text_input("Full Name")
+        name = st.text_input("Name")
         bg = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
         city = st.text_input("City", "Pindi Amolak")
-        phone = st.text_input("Mobile Number")
+        phone = st.text_input("Number")
         
-        submit = st.form_submit_button("SAVE DATA")
-        
-        if submit:
-            if name and phone:
-                # Google Form Bridge
-                form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
-                payload = {
-                    "entry.1491566373": name, 
-                    "entry.1741517409": bg,
-                    "entry.1945112345": city, 
-                    "entry.1235116789": phone
-                }
-                try:
-                    requests.post(form_url, data=payload)
-                    st.success("Saving Data... Auto-refreshing to list!")
-                    time.sleep(1.5) # Thora waqt takay Google Sheet update ho jaye
-                    st.session_state.page = "S" # Page state change
-                    st.rerun() # Auto Refresh
-                except:
-                    st.error("Error saving data.")
-            else:
-                st.warning("Please fill Name and Number.")
+        if st.form_submit_button("SAVE DATA"):
+            # Hum Google Form use karenge kyunke ye kabhi block nahi hota
+            form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
+            payload = {"entry.1491566373": name, "entry.1741517409": bg, "entry.1945112345": city, "entry.1235116789": phone}
+            try:
+                requests.post(form_url, data=payload)
+                st.success("Data Saved! Redirecting...")
+                time.sleep(1)
+                st.session_state.page = "S"
+                st.rerun()
+            except:
+                st.error("Error saving! Try again.")
 
-# --- SEARCH / LIST PAGE ---
 else:
-    st.markdown("<h3 style='color:#990000;'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
-    
-    # Refresh mechanism to avoid cache
-    t = int(time.time())
-    sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-    gid = "2137978586"
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache={t}"
-    
     try:
-        df = pd.read_csv(csv_url)
+        # Cache bypass ke liye timestamp
+        df = pd.read_csv(f"{CSV_URL}&t={int(time.time())}")
         if not df.empty:
-            choice = st.selectbox("Filter by Blood", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            
-            # Using iloc to handle column name issues
-            f_df = df if choice == "All" else df[df.iloc[:, 2].astype(str).str.strip() == choice]
-
-            for i, row in f_df[::-1].iterrows():
+            for i, row in df[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
-                        <p style="margin:5px 0;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
-                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:block; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <h4 style="margin:0; color:#990000;">{row.iloc[0]}</h4>
+                        <p style="margin:5px 0;">🩸 <b>{row.iloc[1]}</b> | 📍 {row.iloc[2]}</p>
+                        <a href="tel:{row.iloc[3]}" style="background:#28a745; color:white; padding:8px; text-decoration:none; border-radius:8px; display:block; text-align:center;">📞 CALL</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
-            st.info("No donors registered yet.")
+            st.info("No donors found.")
     except:
-        st.info("Updating list... Please wait.")
+        st.write("Loading list...")
