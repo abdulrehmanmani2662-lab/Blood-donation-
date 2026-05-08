@@ -1,11 +1,11 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-import requests
 
 # Page Configuration
 st.set_page_config(page_title="Punjab Blood Donation", page_icon="🩸", layout="centered")
 
-# --- CSS: Premium & Professional Design ---
+# --- CSS: Premium Design (Clean & Professional) ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton, #MainMenu { display: none !important; }
@@ -16,10 +16,8 @@ st.markdown("""
     }
     .stButton>button {
         width: 100%; background-color: #990000; color: white;
-        border-radius: 15px; height: 3.8em; font-weight: bold; border: none;
-        transition: 0.3s;
+        border-radius: 12px; height: 3.5em; font-weight: bold; border: none;
     }
-    .stButton>button:hover { background-color: #ff0000; transform: scale(1.02); }
     .donor-card {
         background: white; padding: 18px; border-radius: 15px; 
         border-left: 10px solid #990000; margin-bottom: 12px; 
@@ -38,6 +36,10 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
+# --- Hardcoded Normal Sheet Link ---
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1wi_ltnwCrsTmjj0JvXTxf4EvGuayqeV4s6SV9U91pxc/edit?usp=sharing"
+conn = st.connection("gsheets", type=GSheetsConnection)
+
 # Navigation
 if 'page' not in st.session_state: st.session_state.page = "S"
 c1, c2 = st.columns(2)
@@ -55,51 +57,38 @@ if st.session_state.page == "R":
         
         if st.form_submit_button("SAVE DATA"):
             if name and phone:
-                # Google Form Bridge
-                form_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-XoMAt_e9E6lR6o6YvV4DqR69N_n7XfW_R1p2Y_G-A_v8aA/formResponse"
-                payload = {
-                    "entry.1491566373": name,
-                    "entry.1741517409": bg,
-                    "entry.1945112345": city,
-                    "entry.1235116789": phone
-                }
                 try:
-                    requests.post(form_url, data=payload)
-                    st.success("Mubarak! Data save ho gaya. List check karein.")
+                    # Reading current data
+                    df = conn.read(spreadsheet=SHEET_URL, ttl=0)
+                    new_data = pd.DataFrame([{"Name": name, "Blood Group": bg, "City": city, "Contact": phone}])
+                    updated_df = pd.concat([df, new_data], ignore_index=True)
+                    # Updating the normal sheet
+                    conn.update(spreadsheet=SHEET_URL, data=updated_df)
+                    st.success("Mubarak! Aapka data save ho gaya.")
                     st.balloons()
-                except:
-                    st.error("Technical Error! Check internet.")
+                except Exception as e:
+                    st.error(f"Permission issue! Sheet ko 'Editor' mode par set karein.")
             else:
                 st.warning("Naam aur Number lazmi likhein.")
 
-# --- Search Page (Using your GID for Live List) ---
+# --- Search Page ---
 else:
     st.markdown("<h3 style='color:#990000;'>🔍 Donors Directory</h3>", unsafe_allow_html=True)
-    sheet_id = "1Okg9YfrZPDe2HcvWm8slcVlOV3-ZMianEAX-BRylRq8"
-    
-    # Aapka nikala hua sahi GID number
-    GID_NUMBER = "2137978586" 
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={GID_NUMBER}"
-    
     try:
-        # Fresh data fetch
-        df = pd.read_csv(csv_url)
-        
-        if not df.empty:
+        data = conn.read(spreadsheet=SHEET_URL, ttl=0)
+        if data is not None and not data.empty:
             choice = st.selectbox("Filter by Blood Group", ["All"] + ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"])
-            
-            # Google Form Order: 0:Timestamp, 1:Name, 2:Blood, 3:City, 4:Number
-            filtered = df if choice == "All" else df[df.iloc[:, 2] == choice]
+            filtered = data if choice == "All" else data[data["Blood Group"] == choice]
 
             for i, row in filtered[::-1].iterrows():
                 st.markdown(f"""
                     <div class="donor-card">
-                        <h4 style="margin:0; color:#990000;">{row.iloc[1]}</h4>
-                        <p style="margin:5px 0; color:#333;">🩸 <b>{row.iloc[2]}</b> | 📍 {row.iloc[3]}</p>
-                        <a href="tel:{row.iloc[4]}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL NOW</a>
+                        <h4 style="margin:0; color:#990000;">{row['Name']}</h4>
+                        <p style="margin:5px 0; color:#333;">🩸 <b>{row['Blood Group']}</b> | 📍 {row['City']}</p>
+                        <a href="tel:{row['Contact']}" style="background:#28a745; color:white; padding:10px; text-decoration:none; border-radius:8px; display:inline-block; width:100%; text-align:center; font-weight:bold;">📞 CALL NOW</a>
                     </div>
                 """, unsafe_allow_html=True)
         else:
             st.info("Abhi koi donor register nahi hai.")
     except:
-        st.info("Searching for donors... (Pehla data aatay hi list show hogi)")
+        st.info("Loading donors list...")
